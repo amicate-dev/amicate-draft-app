@@ -1,19 +1,11 @@
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image } from 'react-native';
-
-function getImageSize(uri: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    Image.getSize(uri, (width, height) => resolve({ width, height }), reject);
-  });
-}
 
 export type CropMode = 'square' | 'rect4x3';
 
-/**
- * Center-crops a local image URI to the given aspect (square or 4:3 landscape).
- */
 export async function cropLocalImage(uri: string, mode: CropMode): Promise<string> {
-  const { width: W, height: H } = await getImageSize(uri);
+  const meta = await ImageManipulator.manipulateAsync(uri, []);
+  const { width: W, height: H } = meta;
+
   let cropW: number;
   let cropH: number;
   let originX: number;
@@ -41,6 +33,8 @@ export async function cropLocalImage(uri: string, mode: CropMode): Promise<strin
     }
   }
 
+  const finalWidth = Math.min(1080, cropW)
+
   const result = await ImageManipulator.manipulateAsync(
     uri,
     [
@@ -52,8 +46,9 @@ export async function cropLocalImage(uri: string, mode: CropMode): Promise<strin
           height: cropH,
         },
       },
+      { resize: { width: finalWidth }}
     ],
-    { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+    { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG}
   );
 
   return result.uri;
