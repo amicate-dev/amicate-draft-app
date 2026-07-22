@@ -47,7 +47,13 @@ export default function LandingScreen() {
       if (data?.url) {
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
-        if (result.type !== 'success') {
+        if (result.type === 'success' && result.url) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+
+          if (exchangeError) {
+            setErrorMessage(exchangeError.message.toLowerCase());
+          }
+        } else if (result.type !== 'success') {
           setErrorMessage('google sign in was cancelled. please try again if you want to use it.');
         }
       }

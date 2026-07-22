@@ -55,5 +55,6 @@ export const supabase: SupabaseClient<Database> = createClient(supabaseUrl, supa
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
   },
 });
