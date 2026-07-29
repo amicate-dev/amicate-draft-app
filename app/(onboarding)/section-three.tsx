@@ -61,45 +61,56 @@ export default function SectionThreeScreen() {
     setIsSaving(true);
 
     try {
-      const withUrls: PickerPhoto[] = [];
-      for (let i = 0; i < photos.length; i += 1) {
-        const p = photos[i];
-        let url = p.uploadedUrl;
-        if (!url && p.localUri) {
+      // identify which slots need uploading
+      const initialLoading = photos.map((p) => !p.uploadedUrl && !!p.localUri);
+      setLoadingSlots(initialLoading);
+
+      // map the photos array to an array of async upload tasks
+      const uploadPromises = photos.map(async (p, index) => {
+        if (p.uploadedUrl) {
+          return { localUri: p.localUri, uploadedUrl: p.uploadedUrl}; // just return if something is already uploaded
+        }
+
+        if (!p.localUri) {
+          return null; // just ignore if the slot is empty
+        }
+
+        try {
+          const url = await uploadPhoto(p.localUri, 'profile-photos');
+          return { localUri: p.localUri, uploadedUrl: url };
+        } finally {
+          // turn off the loading spinner for this specific slot once done or failed to upload
           setLoadingSlots((prev) => {
-            const n = [...prev];
-            n[i] = true;
-            return n;
+            const next = [...prev];
+            next[index] = false;
+            return next;
           });
-          try {
-            url = await uploadPhoto(p.localUri, 'profile-photos');
-          } finally {
-            setLoadingSlots((prev) => {
-              const n = [...prev];
-              n[i] = false;
-              return n;
-            });
-          }
         }
-        if (url) {
-          withUrls.push({ localUri: p.localUri, uploadedUrl: url });
-        }
-      }
+      });
+
+      // await all uploads at once
+      const results = await Promise.all(uploadPromises);
+
+      // filter out any nulls/empty slots so we only have valid photos
+      const withUrls = results.filter(Boolean) as PickerPhoto[]
 
       if (withUrls.length === 0) {
         Alert.alert('Photos required', 'Add at least one photo.');
         return;
       }
 
+      // clean out the old photos in the database
       const { error: delErr } = await supabase
         .from('profile_photos')
         .delete()
-        .eq('user_id', session.user.id);
+        .eq('user_id', session.user.id)
+
       if (delErr) {
         Alert.alert('Could not save', delErr.message);
         return;
       }
 
+      // insert the new ones that were selected
       const rows = withUrls.map((photo, index) => ({
         user_id: session.user.id,
         photo_url: photo.uploadedUrl!,
@@ -113,10 +124,12 @@ export default function SectionThreeScreen() {
         return;
       }
 
+      // update onboarding step
       const { error: upErr } = await supabase
         .from('profiles')
-        .update({ onboarding_step: 4 })
+        .update({ onboarding_step: 4})
         .eq('user_id', session.user.id);
+
       if (upErr) {
         Alert.alert('Could not save', upErr.message);
         return;
