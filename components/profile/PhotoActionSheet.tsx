@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { Alert } from 'react-native';
 import { cropLocalImage, type CropMode } from '../../lib/cropImage';
 import { colors } from '../../lib/theme';
 
@@ -63,7 +63,8 @@ export default function PhotoActionSheet({
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Could not process the image.';
         console.warn(msg);
-        onPicked(uri);
+        // fail securely, do not upload the raw, potentially incompatible file
+        Alert.alert('Processing Error', 'Could not process this photo. Please try again.');
         onClose();
       } finally {
         setBusy(false);
