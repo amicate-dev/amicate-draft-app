@@ -1,4 +1,6 @@
 import { useRouter } from 'expo-router';
+import { Alert } from 'react-native';
+import { supabase } from '../../lib/supabase';
 import React from 'react';
 import {
   KeyboardAvoidingView,
@@ -24,7 +26,21 @@ export default function OnboardingWrapper({ currentSection, children }: Props) {
 
   const goBack = () => {
     if (currentSection === 1) {
-      router.replace('/');
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out and leave onboarding?',
+        [
+          { text: 'Cancel', style: 'cancel'},
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: async () => {
+              await supabase.auth.signOut();
+              router.replace('/');
+            },
+          },
+        ]
+      );
       return;
     }
     if (currentSection === 2) {
