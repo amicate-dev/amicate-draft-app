@@ -32,14 +32,20 @@ export default function SectionFourScreen() {
 
     const uid = session.user.id;
 
-    const { count: interestCount, error: iErr } = await supabase
-      .from('user_interests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', uid);
-    const { count: photoCount, error: pErr } = await supabase
-      .from('profile_photos')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', uid);
+    // fire both count queries in parallel
+    const [
+      { count: interestCount, error: iErr},
+      { count: photoCount, error: pErr}.
+    ] = await Promise.all([
+      supabase
+        .from('user_interests')
+        .select('*', { count: 'exact', head: true})
+        .eq('user_id', uid),
+      supabase
+        .from('profile_photos')
+        .select('*', { count: 'exact', head: true})
+        .eq('user_id', uid)
+    ]);
 
     if (iErr || pErr) {
       Alert.alert('Could not verify', (iErr || pErr)?.message ?? 'Try again.');
@@ -52,7 +58,7 @@ export default function SectionFourScreen() {
         'Add at least one interest before finishing.',
         [
           { text: 'Go to interests', onPress: () => router.replace('/section-two') },
-          { text: 'OK', style: 'cancel' },
+          { text: 'OK', style: 'cancel'}
         ]
       );
       return;
